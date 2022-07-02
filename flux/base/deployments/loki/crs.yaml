@@ -1,0 +1,13 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: loki-crs
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  path: ./deploy/loki/crs
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: monitoring-stack

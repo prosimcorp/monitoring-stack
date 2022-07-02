@@ -1,0 +1,38 @@
+# Ref: https://prometheus-operator.dev/docs/operator/api/#matcher
+---
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: global-notifications
+spec:
+  route:
+    groupBy: ['job']
+    groupWait: 30s
+    groupInterval: 30s
+    repeatInterval: 1m
+    receiver: 'slack'
+  receivers:
+    # https://hooks.slack.com/services/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
+    - name: 'slack'
+      slackConfigs:
+        - sendResolved: true
+          apiURL:
+            key: apiURL
+            name: alertmanager-global-notifications-slack
+          channel: '#monitoring-stack-global-notifications'
+          color: '{{ template "slack.color" . }}'
+          title: '{{ template "slack.title" . }}'
+          text: '{{ template "slack.text" . }}'
+          actions:
+            - type: button
+              text: 'Runbook :green_book:'
+              url: '{{ (index .Alerts 0).Annotations.runbook_url }}'
+            - type: button
+              text: 'Query :mag:'
+              url: '{{ (index .Alerts 0).GeneratorURL }}'
+            - type: button
+              text: 'Dashboard :chart_with_upwards_trend:'
+              url: '{{ (index .Alerts 0).Annotations.dashboard_url }}'
+            - type: button
+              text: 'Silence :no_bell:'
+              url: '{{ template "__alert_silence_link" . }}'

@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: grafana
+
+resources: []
+  # Take the advantage to deploy an ExternalSecret CR to get the credentials from a secrets vault
+  # - externalSecret-admin-credentials.yaml

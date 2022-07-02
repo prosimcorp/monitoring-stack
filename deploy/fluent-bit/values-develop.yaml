@@ -1,0 +1,42 @@
+# DISCLAIMER: THESE VALUES ARE FOR DEVELOPMENT PURPOSES ONLY.
+# PLEASE, DON'T DO DIRTY THINGS
+
+fluent-bit:
+  fullnameOverride: fluent-bit
+
+  # Deploy monitoring for Prometheus
+  serviceMonitor:
+    enabled: true
+
+  # Deploy alerts for Alertmanager
+  prometheusRule:
+    enabled: true
+    rules:
+    - alert: NoOutputBytesProcessed
+      expr: rate(fluentbit_output_proc_bytes_total[5m]) == 0
+      annotations:
+        message: |
+           Fluent Bit instance {{ $labels.instance }}'s output plugin {{ $labels.name }} has not processed any
+           bytes for at least 15 minutes.
+        summary: No Output Bytes Processed
+      for: 15m
+      labels:
+        severity: critical
+
+  # Deploy dashboards for Grafana
+  dashboards:
+    enabled: true
+    labelKey: grafana_dashboard_monitoring
+
+  # Throw the output into Loki
+  # https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/configuration-file
+  config:
+    outputs: |
+      [OUTPUT]
+          name                   loki
+          match                  *
+          host                   loki.loki.svc
+          port                   3100
+          labels                 job=fluentbit
+          line_format            json
+          auto_kubernetes_labels on

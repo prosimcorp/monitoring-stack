@@ -1,0 +1,23 @@
+apiVersion: replika.prosimcorp.com/v1alpha1
+kind: Replika
+metadata:
+  name: global-notifications-alertmanagerconfig
+spec:
+  # Some configuration features
+  synchronization:
+    time: "20s"
+
+  # Defines the resource to sync through namespaces
+  source:
+    group: monitoring.coreos.com
+    version: v1alpha1
+    kind: AlertmanagerConfig
+    name: global-notifications
+    namespace: &sourceNamespace kube-prometheus-stack
+
+  # Defines the resources that will be generated
+  target:
+    namespaces:
+      matchAll: true
+      excludeFrom:
+        - *sourceNamespace

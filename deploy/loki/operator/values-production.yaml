@@ -1,0 +1,40 @@
+# DISCLAIMER: THESE VALUES ARE FOR PRODUCTION PURPOSES ONLY.
+# PLEASE, DON'T DO DIRTY THINGS
+
+loki:
+  # Enable monitoring for loki
+  serviceMonitor:
+    enabled: true
+
+  # Tolerate monitoring nodes
+  tolerations:
+    - key: monitoring
+      value: dedicated
+      operator: Equal
+      effect: NoSchedule
+
+  # Try to go to monitoring nodes
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                  - monitoring
+    # Avoid go to nodes where prometheus is inside. Too much consumption
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - prometheus
+          topologyKey: "kubernetes.io/hostname"
+
+  # Store the logs on a volume
+  persistence:
+    enabled: true
+    size: 100Gi

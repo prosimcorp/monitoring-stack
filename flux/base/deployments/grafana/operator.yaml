@@ -1,0 +1,32 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: grafana
+  namespace: flux-system
+spec:
+  # Override Release name to avoid the pattern Namespace-Release
+  # Ref: https://fluxcd.io/docs/components/helm/api/#helm.toolkit.fluxcd.io/v2beta1.HelmRelease
+  releaseName: grafana
+  targetNamespace: grafana
+  interval: 5m
+  dependsOn:
+    - name: loki
+    - name: kube-prometheus-stack
+  chart:
+    spec:
+      chart: ./deploy/grafana/operator
+      sourceRef:
+        kind: GitRepository
+        name: monitoring-stack
+        namespace: flux-system
+      valuesFiles:
+        - ./deploy/grafana/operator/values.yaml
+
+  # Ref: https://fluxcd.io/docs/components/helm/api/#helm.toolkit.fluxcd.io/v2beta1.Install
+  install:
+    createNamespace: true
+    remediation: &remediation
+      retries: 10
+      remediateLastFailure: true
+  upgrade:
+    remediation: *remediation
