@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: kube-prometheus-stack
+
+resources:
+
+  # Deploy the template needed by Alertmanager to craft nice messages on Slack
+  - configMap-alertmanager-templates.yaml
+
+  # Create the secret from Vault with the Webhook of the Slack channel
+  - externalSecret-alertmanager-global-notifications-slack.yaml
+
+  # Deploy the AlertmanagerConfig using the template
+  - alertmanagerConfig-global-notifications.yaml
+
+  # Add some information about the cluster in the messages
+  - patch-alertmanager-global-notifications.yaml
+
+  # Replicate the resource across namespaces due to a bug on Prometheus Operator. When using an AlertmanagerConfig
+  # the matchers on the resulting Alertmanager configuration are fixed to the namespace where the AlertmanagerConfig
+  # is deployed. This was fixed on the last Prometheus Operator version but we need to wait until Kube Prometheus Stack
+  # includes the fix
+  - replika-global-notifications-secret.yaml
+  - replika-global-notifications-alertmanagerconfig.yaml

@@ -1,0 +1,6 @@
+# Ignore helm related things
+**/*.lock
+**/charts/
+
+# IDE dirs and files
+.idea

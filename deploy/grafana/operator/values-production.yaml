@@ -1,0 +1,75 @@
+# DISCLAIMER: THESE VALUES ARE FOR PRODUCTION PURPOSES ONLY.
+# PLEASE, DON'T DO DIRTY THINGS
+
+grafana:
+  fullnameOverride: grafana
+
+  # Administrator credentials when using an existing secret (see below)
+  # WARNING: This secret will be created by External Secrets from Vault
+  admin:
+    existingSecret: "admin-credentials"
+    userKey: username
+    passwordKey: password
+
+  # Grafana's primary configuration
+  # NOTE: values in map will be converted to ini format
+  # ref: http://docs.grafana.org/installation/configuration/
+  grafana.ini:
+    auth.anonymous:
+      enabled: "false"
+      # Hide the Grafana version text from the footer and help tooltip for unauthenticated users (default: false)
+      hide_version: "true"
+
+  # Assign custom affinity rules
+  # ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                  - monitoring
+
+  # Pod's tolerations.
+  # Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  tolerations:
+    - key: monitoring
+      value: dedicated
+      operator: Equal
+      effect: NoSchedule
+
+  # Limit the resources to avoid surprises
+  resources:
+    requests:
+      cpu: "0.5"
+      memory: 2Gi
+    limits:
+      cpu: "1.5"
+      memory: 3Gi
+
+  # Sidecars that collect the configmaps with specified label and stores the included files them into the respective folders
+  sidecar:
+
+    dashboards:
+      enabled: true
+      label: grafana_dashboard_monitoring
+
+      # List of namespace to watch for configmaps
+      searchNamespace: ALL
+
+      # Annotations for Grafana dashboard configmaps
+      provider:
+        allowUiUpdates: true
+        foldersFromFilesStructure: true
+
+    datasources:
+      enabled: true
+      label: grafana_datasource_monitoring
+
+      # List of namespace to watch for configmaps
+      searchNamespace: ALL
+
+      # Should the sidecar looks into secrets, configmaps or both.
+      resource: both

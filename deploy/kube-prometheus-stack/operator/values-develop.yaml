@@ -1,0 +1,149 @@
+# DISCLAIMER: THESE VALUES ARE FOR DEVELOPMENT PURPOSES ONLY.
+# PLEASE, DON'T DO DIRTY THINGS
+
+kube-prometheus-stack:
+
+  # Create default rules for monitoring the cluster
+  defaultRules:
+    rules:
+      # ATTENTION: on managed Kubernetes, like EKS, the following component is part of the master nodes,
+      # and are not accessible, so for convenience, better to disable it
+      kubeScheduler: false
+
+  # Configuration for alertmanager
+  # ref: https://prometheus.io/docs/alerting/alertmanager/
+  alertmanager:
+
+    # DISCLAIMER:
+    # TEMPORARY configuration block for the main receiver: slack
+    # This will be DELETED when an issue is merged: https://github.com/prometheus-operator/prometheus-operator/pull/3821
+    # All this configuration will be added using an AlertmanagerConfig CR
+    config:
+      global:
+        # Default value used by alertmanager if the alert does not include EndsAt, after this time,
+        # mark the alert as resolved
+        resolve_timeout: 5m
+      route:
+        routes: []
+
+      # Load templates from the following paths
+      # DISCLAIMER: This depends on the alertmanagerSpec.configMaps parameter. Take care
+      templates:
+        - '/etc/alertmanager/config/*.tmpl'
+        - '/etc/alertmanager/configmaps/alertmanager-templates/*.tmpl'
+
+    # Configurations for the Alertmanager CR itself
+    alertmanagerSpec:
+
+      # Configmaps in the same namespace as Alermanager CR that are mounted into /etc/alertmanager/configmaps/
+      configMaps:
+        - alertmanager-templates
+
+      # Where to schedule the pods in the cluster
+      affinity: &affinity
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-type
+                    operator: In
+                    values:
+                      - monitoring
+      tolerations: &tolerations
+        - key: monitoring
+          value: dedicated
+          operator: Equal
+          effect: NoSchedule
+
+  # Disable Grafana deployment but configure the values to deploy the dashboards for everything
+  grafana:
+
+    # Grafana is deployed individually
+    enabled: false
+
+    # ForceDeployDatasources Create datasource configmap even if grafana deployment has been disabled
+    forceDeployDatasources: true
+
+    # ForceDeployDashboard Create dashboard configmap even if grafana deployment has been disabled
+    forceDeployDashboards: true
+
+    # Deploy default dashboards
+    defaultDashboardsEnabled: true
+
+    # Set some exclusive labels for monitoring things on datasources and dashboards
+    sidecar:
+      dashboards:
+        label: grafana_dashboard_monitoring
+
+      datasources:
+        label: grafana_datasource_monitoring
+
+  # ATTENTION: on managed Kubernetes, like EKS, the following component is part of the master nodes,
+  # and are not accessible, so for convenience, better to disable it
+  # Component scraping the kube controller manager
+  kubeControllerManager:
+    enabled: false
+
+  # ATTENTION: on managed Kubernetes, like EKS, the following component is part of the master nodes,
+  # and are not accessible, so for convenience, better to disable it
+  # Component scraping kube scheduler
+  kubeScheduler:
+    enabled: false
+
+  # Manages Prometheus and Alertmanager components
+  prometheusOperator:
+
+    # Admission webhook support for PrometheusRules resources added in Prometheus Operator 0.30 can be enabled to prevent incorrectly formatted
+    # rules from making their way into prometheus and potentially preventing the container from starting
+    admissionWebhooks:
+      patch:
+        affinity: *affinity
+        tolerations: *tolerations
+
+    tolerations: *tolerations
+    affinity: *affinity
+
+  # Prometheus instance
+  prometheus:
+    prometheusSpec:
+
+      # Enables Prometheus the administrative HTTP API which includes functionality such as deleting time series.
+      enableAdminAPI: true
+
+      # If true, a nil or {} value for prometheus.prometheusSpec.ruleSelector will cause the
+      # prometheus resource to be created with selectors based on values in the helm deployment,
+      # which will also match the PrometheusRule resources created
+      ruleSelectorNilUsesHelmValues: false
+
+      # If true, a nil or {} value for prometheus.prometheusSpec.serviceMonitorSelector will cause the
+      # prometheus resource to be created with selectors based on values in the helm deployment,
+      # which will also match the servicemonitors created
+      serviceMonitorSelectorNilUsesHelmValues: false
+
+      # If true, a nil or {} value for prometheus.prometheusSpec.podMonitorSelector will cause the
+      # prometheus resource to be created with selectors based on values in the helm deployment,
+      # which will also match the podmonitors created
+      podMonitorSelectorNilUsesHelmValues: false
+
+      # Nodes where to launch the pods
+      tolerations: *tolerations
+      affinity: *affinity
+
+      # Resource limits & requests
+      resources:
+        limits:
+          cpu: "1"
+          memory: 6Gi
+        requests:
+          cpu: 50m
+          memory: 1Gi
+
+      # Spec for persistent data
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 100Gi

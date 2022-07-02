@@ -1,0 +1,17 @@
+# Ref: https://grafana.com/docs/grafana/latest/administration/provisioning/#datasources
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-datasource
+  labels:
+    grafana_datasource_monitoring: "1"
+data:
+  datasource.yaml: |-
+    apiVersion: 1
+    datasources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki.loki.svc:3100/
+      jsonData:
+        maxLines: 1000

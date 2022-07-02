@@ -1,0 +1,6 @@
+# DISCLAIMER: This file is forced by Flux to handle the default 'values.yaml' file
+# using 'valuesFiles' attribute, which is not included by default
+# Ref: https://fluxcd.io/docs/components/helm/api/#helm.toolkit.fluxcd.io/v2beta1.HelmChartTemplateSpec
+# Ref: https://github.com/grafana/helm-charts/blob/main/charts/grafana/values.yaml
+
+grafana: {}

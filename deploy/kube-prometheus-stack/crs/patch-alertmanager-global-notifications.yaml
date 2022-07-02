@@ -1,0 +1,33 @@
+---
+apiVersion: reforma.prosimcorp.com/v1alpha1
+kind: Patch
+metadata:
+  name: alertmanager-global-notifications
+spec:
+  synchronization:
+    time: "5s"
+  sources:
+    - apiVersion: v1
+      kind: ConfigMap
+      name: cluster-info
+      namespace: kube-system
+  target:
+    apiVersion: monitoring.coreos.com/v1alpha1
+    kind: AlertmanagerConfig
+    name: global-notifications
+    namespace: kube-prometheus-stack
+  patchType: application/json-patch+json
+  template: |
+    {{- $source := (index . 1) -}}
+    
+    {{- $title := printf `{{ template "slack.title" . }}` -}}
+
+    {{- if not (empty $source) }}
+      {{- $information := printf `[ENVIRONMENT: %s | REGION: %s | CLUSTER: %s ]` $source.data.environment $source.data.region $source.data.name  -}}
+      {{- $title = cat $information $title -}}
+    {{- end }}
+
+    - op: replace
+      path: /spec/receivers/0/slackConfigs/0/title
+      value: |
+        {{ $title }}

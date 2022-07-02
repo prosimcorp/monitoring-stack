@@ -1,0 +1,53 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../base
+
+commonLabels:
+  app.monitoring-stack/environment: production
+
+patches:
+  # Set production values for Loki
+  - patch: |
+      - op: add
+        path: /spec/chart/spec/valuesFiles/-
+        value: ./deploy/loki/operator/values-production.yaml
+    target: &target
+      group: helm.toolkit.fluxcd.io
+      version: v2beta1
+      kind: HelmRelease
+      name: loki
+
+  # Set production values for kube-prometheus-stack
+  - patch: |
+      - op: add
+        path: /spec/chart/spec/valuesFiles/-
+        value: ./deploy/kube-prometheus-stack/operator/values-production.yaml
+    target:
+      group: helm.toolkit.fluxcd.io
+      version: v2beta1
+      kind: HelmRelease
+      name: kube-prometheus-stack
+
+  # Set production values for FluentBit
+  - patch: |
+      - op: add
+        path: /spec/chart/spec/valuesFiles/-
+        value: ./deploy/fluent-bit/values-production.yaml
+    target:
+      group: helm.toolkit.fluxcd.io
+      version: v2beta1
+      kind: HelmRelease
+      name: fluent-bit
+
+  # Set production values for Grafana
+  - patch: |
+      - op: add
+        path: /spec/chart/spec/valuesFiles/-
+        value: ./deploy/grafana/operator/values-production.yaml
+    target:
+      group: helm.toolkit.fluxcd.io
+      version: v2beta1
+      kind: HelmRelease
+      name: grafana
