@@ -8,9 +8,6 @@ resources:
   # Deploy the template needed by Alertmanager to craft nice messages on Slack
   - configMap-alertmanager-templates.yaml
 
-  # Create the secret from Vault with the Webhook of the Slack channel
-  - externalSecret-alertmanager-global-notifications-slack.yaml
-
   # Deploy the AlertmanagerConfig using the template
   - alertmanagerConfig-global-notifications.yaml
 

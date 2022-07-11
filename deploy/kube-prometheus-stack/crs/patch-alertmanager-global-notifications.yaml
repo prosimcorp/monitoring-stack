@@ -1,3 +1,5 @@
+# This patch dynamically modify the message sent to Slack to give deeper information about the cluster, just in case
+# you have several teams with several clusters with alerts coming to the same Slack topic
 ---
 apiVersion: reforma.prosimcorp.com/v1alpha1
 kind: Patch
@@ -23,7 +25,7 @@ spec:
     {{- $title := printf `{{ template "slack.title" . }}` -}}
 
     {{- if not (empty $source) }}
-      {{- $information := printf `[ENVIRONMENT: %s | REGION: %s | CLUSTER: %s ]` $source.data.environment $source.data.region $source.data.name  -}}
+      {{- $information := printf `[ACCOUNT: %s | REGION: %s | CLUSTER: %s ]` $source.data.account $source.data.region $source.data.name  -}}
       {{- $title = cat $information $title -}}
     {{- end }}
 

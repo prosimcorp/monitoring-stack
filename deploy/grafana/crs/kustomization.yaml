@@ -3,5 +3,6 @@ kind: Kustomization
 
 namespace: grafana
 
-resources:
-- externalSecret-admin-credentials.yaml
+resources: []
+  # Take the advantage to deploy an ExternalSecret CR to get the credentials from a secrets vault
+  # - externalSecret-admin-credentials.yaml

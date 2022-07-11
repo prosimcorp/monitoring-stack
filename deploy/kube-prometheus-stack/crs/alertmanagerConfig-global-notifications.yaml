@@ -36,7 +36,3 @@ spec:
             - type: button
               text: 'Silence :no_bell:'
               url: '{{ template "__alert_silence_link" . }}'
-
-    - name: 'webhook'
-      webhookConfigs:
-        - url: 'https://notifications.infrastructure.s73cloud.com/alertmanager?tags=polynet-emea,eu-west-1'

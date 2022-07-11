@@ -1,11 +1,7 @@
----
-# YAML header
-ignore_macros: true
----
-
 # Monitoring Stack
 
 ## Important
+
 Before diving deeper in the specific documentation of this repository, you must know that is part of an entire flow
 composed by several repositories. In the following diagram you will have a better insight.
 
@@ -15,7 +11,7 @@ composed by several repositories. In the following diagram you will have a bette
                                                          |      +----------------------+
                                                          |
 +-----------------------+       +--------------------+   |      +----------------------+
-| 1. Terraform EKS/GKE  +------>| 2. Flux clusters   +---+----->|  4. Monitoring Stack |
+| 1. Automated EKS/GKE  +------>| 2. FluxCD Template +---+----->|  4. Monitoring Stack |
 +-----------------------+       +--------------------+   |      +----------------------+
                                                          |
                                                          |      +----------------------+
@@ -24,20 +20,23 @@ composed by several repositories. In the following diagram you will have a bette
 ```
 
 ## Description
+
 Monitoring stack to deploy things needed to watch metrics, logs and traces and see them in a graphical dashboard.
 Reliable and automated.
 
 ## Motivation
-We need reliability on monitoring, and some tools must be configured to work together. When a new cluster is created,
-it needs a whole monitoring stack deployed. 
 
-One of the problem we detected is about SREs finding some bug on its cluster's monitoring. The procedure this case would 
-be to upgrade the template of the cluster and then apply the changes to all the clusters, spending a lot of time of 
-different people to do the task, which is basically replicating the changes. Because of this, the SRE chapter decided to
-provide a monitoring stack, well tested and integrated where all the members can collaborate once and rise the improvements
+As SREs, we need reliability on the operators we use, and some tools must be configured to work together.
+When a new cluster is created, it needs a whole tooling stack deployed.
+
+One of the problem we detected in te past is about SREs finding some bug on their clusters' tooling. The procedure this
+case would be to fix it and upgrade the cluster, then apply the changes to the rest of the clusters, spending a lot of 
+time of different people to do the task, which is basically replicating the changes. Because of this, we decided to
+provide a tooling stack, well tested and integrated where everyone can collaborate once and rise the improvements
 easier.
 
 ## What you should expect
+
 This stack will be made on top of well tested tools, such as Prometheus, Loki, FluentBit, Grafana and so on. This is
 done this way due to monitoring must be as reliable as possible. 
 
@@ -47,45 +46,66 @@ become solid, they will be promoted to `production` deployable stack
 
 ## Some requirements here
 
-> All the following requirements are created inside Kubernetes either on cluster creation or on deployment the Tooling Stack
+> All the following requirements are created inside Kubernetes on cluster creation if you create the cluster using
+> [Automated EKS](https://github.com/prosimcorp/automated-eks)
 
-This project relies on several dependencies to work properly and be automatically configured.
-
-#### External Secrets
-
-External Secrets is needed to get some credentials from Vault to generate Kubernetes Secrets for several tools 
-deployed on this stack, such as Grafana or Alertmanager.
-
-> For more documentation, please go to the documentation of the
-> [Tooling Stack](https://gitlab.infrastructure.s73cloud.com/Infrastructure/tooling-stack)
-
-#### A very special ConfigMap 
+### A very special ConfigMap 
 
 A ConfigMap called `cluster-info`, deployed inside the namespace `kube-system`. This resource is used to customize
 some deployments according to the cloud provider, the environment, etc.
-For example, this repository relies on the information stored there to customize the messages sent by Alertmanager's,
-for example to Slack, adding a header with useful information about the cluster.
+
+For example, this repository relies on the information stored there to customize the messages sent by Alertmanager 
+to Slack, adding a header with useful information about the cluster.
 This information will help on debugging process of the problems, giving a better insight about the source.
 
 Learning by example is funnier, so the content of the configmap is like the following:
 
 ```yaml
 apiVersion: v1
-data:
-  account: "111111111111"
-  environment: develop
-  name: dremel-develop
-  provider: AWS
-  region: eu-west-1
 kind: ConfigMap
 metadata:
   name: cluster-info
   namespace: kube-system
+data:
+  # The provider. Available values are: AWS, GCP
+  provider: AWS 
+  # Project ID on GCP, or Account number on AWS
+  account: "111111111111" 
+  region: eu-west-1
+  name: your-kubernetes-cluster-name
+```
+
+### Several secrets must be created
+
+> We recommend not to craft secrets this way, but automate its provisioning with tools like External Secrets, 
+> with credentials coming from a secrets vault. To follow this recommendation, just fork the repository and include the 
+> External Secrets CRs with the same `Secret` names for the targets
+
+#### A secret for Grafana
+
+To generate credentials for Grafana, just execute the following command against your cluster before deploying the stack.
+This can be done on cluster creation time:
+
+```console
+kubectl create secret generic admin-credentials -n grafana \
+    --from-literal username="your-username" \
+    --from-literal password="your password"
+```
+
+#### A secret for Alertmanager
+
+Notifications are sent to Slack using a webhook, to a channel called `#monitoring-stack-global-notifications`. This
+mechanism needs a `Secret` resource to give the webhook URL.
+
+To generate the secret, just execute the following command against your cluster before deploying the stack.
+This can be done on cluster creation time:
+
+```console
+kubectl create secret generic alertmanager-global-notifications-slack -n kube-prometheus-stack \
+    --from-literal apiURL="https://your-webhook-URL"
 ```
 
 ## How to access Grafana
-Each cluster has its own monitoring stack deployed, so the subdomains for each Ingress needed are different between
-clusters. Due to this and enforcing the security, we will not deploy an Ingress to access the dashboard.
 
 The dashboard can be accessed using a tunnel as follows:
 
@@ -96,11 +116,9 @@ kubectl port-forward service/grafana -n grafana 8080:80
 Then, in your browser, you can access the dashboard just accessing [http://localhost:8080](http://localhost:8080)
 
 #### The credentials for Grafana
-These credentials are given to the cluster by **External Secrets** from **Vault**, and it can be found on `infrastructure`
-section inside **Vault**.
 
-Of course, to access Grafana, as operator you will need them. Just look for it inside Vault or look for a secret called 
-`admin-credentials` inside the `grafana` namespace using kubectl as follows
+Just look for a secret called `admin-credentials` inside the `grafana` namespace using kubectl as follows. You created
+it on a previous step.
 
 ```console
 kubectl get secret admin-credentials -n grafana --template={{.data.username}} | base64 -d
@@ -114,7 +132,7 @@ Kubernetes nodes specially tainted for them. This is done using tolerations and 
 
 ```yaml
 # Manifest shorted for better focusing
-affinity: &affinity
+affinity:
   nodeAffinity:
     requiredDuringSchedulingIgnoredDuringExecution:
       nodeSelectorTerms:
@@ -123,7 +141,7 @@ affinity: &affinity
             operator: In
             values:
               - monitoring
-tolerations: &tolerations
+tolerations:
 - key: monitoring
   value: dedicated
   operator: Equal
@@ -135,6 +153,7 @@ If those nodes don't exist, Kubernetes will not be able to schedule the resource
 and the deployment will never happen.
 
 ## How to deploy using Flux
+
 SREs understand how difficult is to deploy everything, so we have done that task for you to make it easier.
 On the root of this repository you can find a directory called `flux` with environments inside, i.e. `flux/production` or
 `flux/develop`. All you need from now is pointing your Flux deployment to the stack you want to deploy, using a GitRepository
@@ -142,7 +161,7 @@ and Kustomization as follows:
 
 ```yaml
 ---
-# Git repository for Kafka
+# Point git repository for Monitoring Stack
 apiVersion: source.toolkit.fluxcd.io/v1beta1
 kind: GitRepository
 metadata:
@@ -152,9 +171,10 @@ spec:
   interval: 20s
   ref:
     branch: master
+    tag: v0.1.0
   secretRef:
     name: flux-system
-  url: ssh://git@gitlab.s73cloud.com:13579/infrastructure/monitoring-stack.git
+  url: https://github.com/prosimcorp/monitoring-stack.git
 ---
 # Deploy monitoring stack
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
@@ -177,7 +197,7 @@ Pay special attention to the `spec.path` because there is where the desired stac
 the parameter to `./flux/develop` or to `./flux/production`
 
 Anyway, as described previously, we did it for you in the templates, i.e. the template for
-[launching EKS clusters](https://gitlab.s73cloud.com:29999/Infrastructure/flux-clusters/templates/base-eks/-/tree/master/infrastructure/monitoring-stack)
+[FluxCD Template](https://github.com/prosimcorp/fluxcd-template)
 
 ## Troubleshooting
 
@@ -239,12 +259,10 @@ kubectl rollout restart -n fluent-bit daemonset.apps/fluent-bit
 
 ---
 
-## Full documentation
-
-You have a simple set of instructions on this [README](docs/README.md) to launch the docs locally
-
 ## How to collaborate
 
-1. Create a branch and change inside everything you need
-2. Launch a cluster pointing monitoring-stack to this repository but to your branch
-3. Open a Pull Request to merge your code. Don't be dirty with the commits (squash them), be clear with the commit message, etc
+1. Open an issue and discuss the problem to find together the best way to solve it
+2. Fork the repository, create a branch and change inside everything you need
+3. Launch a cluster pointing monitoring-stack to your repository with the changes
+4. Open a Pull Request to merge your code. Don't be dirty with the commits (squash them), be clear with the commit message, etc
+5. Cheers 🎉
