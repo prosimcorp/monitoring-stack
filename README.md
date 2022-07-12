@@ -11,13 +11,28 @@ composed by several repositories. In the following diagram you will have a bette
                                                          |      +----------------------+
                                                          |
 +-----------------------+       +--------------------+   |      +----------------------+
-| 1. Automated EKS/GKE  +------>| 2. FluxCD Template +---+----->|  4. Monitoring Stack |
+| 1. Automated K8S      +------>| 2. FluxCD Template +---+----->|  4. Monitoring Stack |
 +-----------------------+       +--------------------+   |      +----------------------+
                                                          |
                                                          |      +----------------------+
                                                          +----->|  5. Applications     |
                                                                 +----------------------+
 ```
+
+**[1] Automated K8S:** This stage consists of a Kubernetes cluster which is created and automated using GitOps approach.  
+We cover this stage with several repositories ready for different cloud providers:
+  * [Automated EKS](https://github.com/prosimcorp/automated-eks)
+  * [Automated GKE](https://github.com/prosimcorp/automated-gke)
+  * [Automated DO](https://github.com/prosimcorp/automated-do)
+
+> This stage can be covered for different cloud providers or with different technologies. Don't hesitate to code them 
+> if needed
+
+**[2] [FluxCD Template](https://github.com/prosimcorp/fluxcd-template)**
+
+**[3] [Tooling Stack](https://github.com/prosimcorp/tooling-stack)**
+
+**[4] [Monitoring Stack](https://github.com/prosimcorp/monitoring-stack)**
 
 ## Description
 
@@ -46,8 +61,16 @@ become solid, they will be promoted to `production` deployable stack
 
 ## Some requirements here
 
-> All the following requirements are created inside Kubernetes on cluster creation if you create the cluster using
-> [Automated EKS](https://github.com/prosimcorp/automated-eks)
+> Following requirements are already covered by other projects crafted by us to bootstrap Kubernetes:
+>
+> - [Tooling Stack](https://github.com/prosimcorp/tooling-stack)
+
+To deploy this system inside Kubernetes, some requirements must be satisfied.
+
+- [Kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/) `v1.23+`
+- [Helm](https://helm.sh/docs/intro/install/) `v3.9.0+`
+- [Replika Operator](https://github.com/prosimcorp/replika) `v0.2.5+`
+- [Reforma Operator](https://github.com/prosimcorp/reforma) `v0.1.1+`
 
 ### A very special ConfigMap 
 
@@ -67,9 +90,9 @@ metadata:
   name: cluster-info
   namespace: kube-system
 data:
-  # The provider. Available values are: AWS, GCP
+  # The provider. Available values are: AWS, GCP, DO
   provider: AWS 
-  # Project ID on GCP, or Account number on AWS
+  # Project ID on GCP, account number on AWS, or project name on DO
   account: "111111111111" 
   region: eu-west-1
   name: your-kubernetes-cluster-name
@@ -196,7 +219,7 @@ spec:
 Pay special attention to the `spec.path` because there is where the desired stack will be defined, setting
 the parameter to `./flux/develop` or to `./flux/production`
 
-Anyway, as described previously, we did it for you in the templates, i.e. the template for
+Anyway, as described previously, we did it for you in the templates, i.e. the template inside
 [FluxCD Template](https://github.com/prosimcorp/fluxcd-template)
 
 ## Troubleshooting
